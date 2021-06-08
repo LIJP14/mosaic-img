@@ -1,80 +1,92 @@
 class MosaicImg {
-  /**
-  * @param url 图片链接
-  * @param point 打码区域 {x, y, width, height}
-  * @param size 马赛克大小
-  */
-  constructor (url, point, size) {
-   this.url = url;
-   this.point = point;
-   this.size = size;
-  }
-
-  // 计算马赛克的大小，超过300的部分，每200，就增加5
-  calculateSize (imgWidth, imgHeight) {
-   let size = 13; // 默认马赛克大小
-   const imgSize = 300; // 默认图片大小
-   const value = imgWidth > imgHeight ? imgWidth : imgHeight;
-
-   // 图片大小每增加 200，马赛克大小就增加 5
-   if (value > imgSize) {
-    size = (value - imgSize) / 200 * 5 + size;
-    size = Math.round(size);
-   }
-
-   return size;
-  }
-
-  drawMosaic (context, point, imgWidth, imgHeight, size) {
-   const imgData = context.getImageData(0, 0, imgWidth, imgHeight);
-
-   for (let y = Math.round(point.y), maxY = y + Math.round(point.height); y < maxY; y += size) {
-    for (let x = Math.round(point.x), maxX = x + Math.round(point.width); x < maxX; x += size) {
-     const index = (y * imgWidth + x) * 4;
-     const R = imgData.data[index];
-     const G = imgData.data[index + 1];
-     const B = imgData.data[index + 2];
-     const A = imgData.data[index + 3]
-
-     context.fillStyle = `rgba(${R}, ${G}, ${B}, ${A})`;
-     context.fillRect(x, y, maxX - x, maxY - y);
+    /**
+    * @param url 图片链接
+    * @param point 打码区域 {x, y, width, height}
+    * @param size 马赛克大小
+    */
+    constructor (url, point, size) {
+        this.url = url;
+        this.point = point;
+        this.size = size;
     }
-   }
-  }
 
-  getMosaicImg () {
-   return new Promise((resolve, reject) => {
-    const $img = new Image();
-    $img.src = this.url;
-    $img.setAttribute('crossOrigin', 'anonymous')
+    /**
+    * 计算马赛克的大小，超过300的部分，每200，就增加5
+    * @param imgWidth
+    * @param imgHeight
+    */
+    calculateSize (imgWidth, imgHeight) {
+        // 默认马赛克大小
+        let size = 13;
+        // 默认图片大小
+        const imgSize = 300;
+        const value = imgWidth > imgHeight ? imgWidth : imgHeight;
 
-    
+        // 图片大小每增加 200，马赛克大小就增加 5
+        if (value > imgSize) {
+            size = (value - imgSize) / 200 * 5 + size;
+            size = Math.round(size);
+        }
+        
+        return size;
+    }
 
-    $img.onerror = (e) => {
-     reject(e);
-    };
+    /**
+    * 实现打码
+    * @param context 
+    * @param point { x, y, width, height }
+    * @param imgWidth
+    * @param imgHeight
+    * @param size 马赛克块的尺寸
+    */
+    drawMosaic (context, point, imgWidth, imgHeight, size) {
+        const imgData = context.getImageData(0, 0, imgWidth, imgHeight);
 
-    $img.onload = (e) => {
-     const $canvas = document.createElement('canvas');
-     const context = $canvas.getContext('2d');
+        for (let y = Math.round(point.y), maxY = y + Math.round(point.height); y < maxY; y += size) {
+            for (let x = Math.round(point.x), maxX = x + Math.round(point.width); x < maxX; x += size) {
+                 const index = (y * imgWidth + x) * 4;
+                 const R = imgData.data[index];
+                 const G = imgData.data[index + 1];
+                 const B = imgData.data[index + 2];
+                 const A = imgData.data[index + 3]
 
-     $canvas.width = $img.width;
-     $canvas.height = $img.height;
+                 context.fillStyle = `rgba(${R}, ${G}, ${B}, ${A})`;
+                 context.fillRect(x, y, maxX - x, maxY - y);
+            }
+        }
+    }
 
-     context.drawImage($img, 0, 0);
+    getMosaicImg () {
+        return new Promise((resolve, reject) => {
+            const $img = new Image();
+            $img.src = this.url;
+            // $img.setAttribute('crossOrigin', 'anonymous'); // 本地测试，解决跨域
 
-     const size = Number(this.size) || this.calculateSize($img.width, $img.height);
+            $img.onerror = (e) => {
+                reject(e);
+            };
 
-     this.drawMosaic(context, {
-      x: Number(this.point.x) || 0,
-      y: Number(this.point.y) || 0,
-      width: Number(this.point.width) || $canvas.width,
-      height: Number(this.point.height) || $canvas.height
-     }, $canvas.width, $canvas.height, size);
+            $img.onload = (e) => {
+                const $canvas = document.createElement('canvas');
+                const context = $canvas.getContext('2d');
 
-     const url = $canvas.toDataURL();
-     resolve(url);
-    };
-   });
-  }
- }
+                $canvas.width = $img.width;
+                $canvas.height = $img.height;
+
+                context.drawImage($img, 0, 0);
+
+                const size = Number(this.size) || this.calculateSize($img.width, $img.height);
+
+                this.drawMosaic(context, {
+                    x: Number(this.point.x) || 0,
+                    y: Number(this.point.y) || 0,
+                    width: Number(this.point.width) || $canvas.width,
+                    height: Number(this.point.height) || $canvas.height
+                }, $canvas.width, $canvas.height, size);
+
+                const url = $canvas.toDataURL();
+                resolve(url);
+            };
+        });
+    }
+}
